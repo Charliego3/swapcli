@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/daoleno/uniswap-sdk-core/entities"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"log"
 	"os"
 	"swapcli/contracts"
 	"time"
@@ -85,44 +86,48 @@ var (
 	)
 )
 
-type Chain struct {
+type ChainSelector struct {
 	keyMap  KeyMap
 	help    help.Model
 	cursor  int
 	choices []string
 }
 
-func (c Chain) Init() tea.Cmd {
+func (c ChainSelector) Init() tea.Cmd {
 	return nil
 }
 
-func (c Chain) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (c ChainSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, c.keyMap.keys[KeyEnter]):
 			chain := c.choices[c.cursor]
-			var rawurl string
+			var rawURL string
 			if chain == BSC {
 				opts.chainId = 56
-				rawurl = "https://bscrpc.com"
+				rawURL = "https://bscrpc.com"
 			} else if chain == Main {
 				opts.chainId = 1
-				rawurl = ""
+				rawURL = "https://eth.drpc.org"
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 			defer cancel()
-			client, err := ethclient.DialContext(ctx, rawurl)
+			client, err := ethclient.DialContext(ctx, rawURL)
 			if err != nil {
 				Println(red.Render(err.Error()))
 				return c, tea.Quit
 			}
 			opts.client = client
-			return NewTokenSelector(), tea.Println(
+			s := spinner.New(
+				spinner.WithSpinner(spinner.Globe),
+				spinner.WithStyle(optionStyle),
+			)
+			return NewTokenSelector(s), tea.Batch(tea.Println(
 				green.Render("\nNetwork: "),
 				grey.Render(c.choices[c.cursor]),
-			)
+			), textinput.Blink, s.Tick)
 		case key.Matches(msg, c.keyMap.keys[KeyDown]):
 			c.cursor++
 			if c.cursor > len(c.choices)-1 {
@@ -143,7 +148,7 @@ func (c Chain) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-func (c Chain) View() string {
+func (c ChainSelector) View() string {
 	if opts.chainId > 0 {
 		return ""
 	}
@@ -167,7 +172,7 @@ func Println(v ...any) {
 }
 
 var (
-	app = tea.NewProgram(Chain{
+	app = tea.NewProgram(ChainSelector{
 		choices: []string{BSC, Main},
 		help:    help.New(),
 		keyMap:  NewSelectKeyMap(),
@@ -175,7 +180,6 @@ var (
 )
 
 func main() {
-	log.SetFlags(log.Llongfile)
 	if _, err := app.Run(); err != nil {
 		println(err)
 		os.Exit(1)

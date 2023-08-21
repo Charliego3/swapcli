@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"swapcli/contracts"
-	"time"
 )
 
 type TokenSelector struct {
@@ -27,14 +26,7 @@ type TokenSelector struct {
 	err      error
 }
 
-func NewTokenSelector() *TokenSelector {
-	s := spinner.New(
-		spinner.WithSpinner(spinner.Globe),
-		spinner.WithStyle(optionStyle),
-	)
-	go func() {
-		app.Send(tea.Batch(s.Tick))
-	}()
+func NewTokenSelector(s spinner.Model) *TokenSelector {
 	return &TokenSelector{
 		help:    help.New(),
 		input:   NewTextInput("please enter the contract address"),
@@ -59,8 +51,6 @@ func (t *TokenSelector) getPrompt() string {
 	}
 	return "Base Currency"
 }
-
-var count int
 
 func (t *TokenSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if t.quitting {
@@ -112,7 +102,6 @@ func (t *TokenSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return
 				}
 
-				time.Sleep(time.Second * 10)
 				token := entities.NewToken(uint(opts.chainId), address, uint(decimals), symbol, name)
 				t.prompt = strings.Replace(t.getPrompt(), " ", "", 1)
 				if opts.token0 == nil {
@@ -130,7 +119,6 @@ func (t *TokenSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	count++
 	if t.err != nil {
 		t.quitting = true
 		Println(red.Render(t.err.Error()))
@@ -176,11 +164,11 @@ func (t *TokenSelector) View() string {
 
 	var s string
 	if t.loading {
-		s = "\n" + t.spinner.View() + grey.Render("loading token")
+		s = "\n" + t.spinner.View() + grey.Render(" loading token ...")
 	} else {
 		s = blue.Render("What's the contract address of the "+t.getPrompt()+"?") + "\n"
 		s += t.input.View()
 	}
-	s += padding.Render("\n\n" + t.help.View(t.keyMap) + strconv.FormatBool(t.loading) + " " + strconv.Itoa(count) + "\n")
+	s += padding.Render("\n\n" + t.help.View(t.keyMap) + "\n")
 	return s
 }
