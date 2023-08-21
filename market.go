@@ -31,7 +31,7 @@ func NewMarketConfirm() MarketConfirm {
 }
 
 func (m MarketConfirm) Init() tea.Cmd {
-	return textinput.Blink
+	return nil
 }
 
 func (m MarketConfirm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -40,18 +40,17 @@ func (m MarketConfirm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, m.keys.keys[KeyEnter]):
 			opts.market = m.input.Value()
+			m.quitting = true
+
 			if opts.market == "" {
-				m.quitting = true
-				Println(red.Render("Exchange market can not be empty!!!"))
 				return m, tea.Quit
 			}
-			return m, tea.Println(
+			return NewExchangeSelector(), tea.Println(
 				green.Render("Market: "),
 				grey.Render(opts.market),
 			)
 		case key.Matches(msg, m.keys.keys[KeyQuit]):
 			m.quitting = true
-			Println()
 			return m, tea.Quit
 		}
 	}
@@ -63,6 +62,9 @@ func (m MarketConfirm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m MarketConfirm) View() string {
 	if m.quitting {
+		if opts.market == "" {
+			return red.Render("Exchange market can not be empty!!!\n")
+		}
 		return ""
 	}
 	s := blue.Render("Please confirm whether the market is correct?") + "\n"

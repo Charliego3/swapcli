@@ -114,21 +114,18 @@ func (t *TokenSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}()
 		case key.Matches(msg, t.keyMap.keys[KeyQuit]):
 			t.quitting = true
-			Println()
 			return t, tea.Quit
 		}
 	}
 
 	if t.err != nil {
-		t.quitting = true
-		Println(red.Render(t.err.Error()))
 		return t, tea.Quit
 	}
 
 	if opts.token1 != nil {
 		t.quitting = true
 		info := t.outputToken(t.prompt, opts.token1)
-		return NewMarketConfirm(), tea.Println(info...)
+		return NewMarketConfirm(), tea.Batch(tea.Println(info...), textinput.Blink)
 	}
 
 	var sCmd, iCmd tea.Cmd
@@ -158,8 +155,12 @@ func (t *TokenSelector) outputToken(prompt string, token *entities.Token) []any 
 }
 
 func (t *TokenSelector) View() string {
+	if t.err != nil {
+		return red.Render(t.err.Error()) + "\n"
+	}
+
 	if t.quitting {
-		return ""
+		return "\n"
 	}
 
 	var s string

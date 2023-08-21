@@ -17,6 +17,11 @@ func NewTextInput(placeholder string) textinput.Model {
 	return ti
 }
 
+var KeyBindingQuit = key.NewBinding(
+	key.WithKeys("esc", "ctrl+c"),
+	key.WithHelp("esc/ctrl+c", "quit"),
+)
+
 func NewHelpBinding() key.Binding {
 	return key.NewBinding(
 		key.WithKeys("?"),
@@ -27,7 +32,7 @@ func NewHelpBinding() key.Binding {
 func NewEnterBinding(desc string) key.Binding {
 	return key.NewBinding(
 		key.WithKeys(tea.KeyEnter.String()),
-		key.WithHelp("\U000F17A5", desc),
+		key.WithHelp("\U000F17A5 <enter>", desc),
 	)
 }
 
@@ -48,8 +53,9 @@ func NewSelectKeyMap() KeyMap {
 		},
 		short: KeyHelp | KeyQuit,
 		full: []KeyType{
-			KeyUp | KeyDown | KeyEnter,
-			KeyHelp | KeyQuit,
+			KeyUp | KeyDown,
+			KeyEnter | KeyQuit,
+			KeyHelp,
 		},
 	}
 }

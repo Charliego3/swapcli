@@ -11,18 +11,20 @@ import (
 	"github.com/daoleno/uniswap-sdk-core/entities"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"os"
+	"swapcli/apis"
 	"swapcli/contracts"
 	"time"
 )
 
 type Options struct {
-	chainId int
-	client  *ethclient.Client
-	token0  *entities.Token
-	token1  *entities.Token
-	erc200  *contracts.ERC20
-	erc201  *contracts.ERC20
-	market  string
+	chainId  int
+	client   *ethclient.Client
+	token0   *entities.Token
+	token1   *entities.Token
+	erc200   *contracts.ERC20
+	erc201   *contracts.ERC20
+	market   string
+	exchange apis.Exchange
 }
 
 const (
@@ -47,17 +49,18 @@ type KeyMap struct {
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return k.getBinding(k.short)
+	return k.getKeyBinding(k.short)
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		k.getBinding(k.full[0]),
-		k.getBinding(k.full[1]),
+	var bindings [][]key.Binding
+	for _, b := range k.full {
+		bindings = append(bindings, k.getKeyBinding(b))
 	}
+	return bindings
 }
 
-func (k KeyMap) getBinding(flag KeyType) []key.Binding {
+func (k KeyMap) getKeyBinding(flag KeyType) []key.Binding {
 	var keys []key.Binding
 	if flag&KeyUp != 0 {
 		keys = append(keys, k.keys[KeyUp])
@@ -79,11 +82,6 @@ func (k KeyMap) getBinding(flag KeyType) []key.Binding {
 
 var (
 	opts = &Options{}
-
-	KeyBindingQuit = key.NewBinding(
-		key.WithKeys("q", "esc", "ctrl+c"),
-		key.WithHelp("q/esc/ctrl+c", "quit"),
-	)
 )
 
 type ChainSelector struct {
@@ -91,6 +89,7 @@ type ChainSelector struct {
 	help    help.Model
 	cursor  int
 	choices []string
+	err     error
 }
 
 func (c ChainSelector) Init() tea.Cmd {
@@ -114,9 +113,9 @@ func (c ChainSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 			defer cancel()
-			client, err := ethclient.DialContext(ctx, rawURL)
-			if err != nil {
-				Println(red.Render(err.Error()))
+			var client *ethclient.Client
+			client, c.err = ethclient.DialContext(ctx, rawURL)
+			if c.err != nil {
 				return c, tea.Quit
 			}
 			opts.client = client
@@ -149,13 +148,17 @@ func (c ChainSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (c ChainSelector) View() string {
+	if c.err != nil {
+		return red.Render(c.err.Error()) + "\n"
+	}
+
 	if opts.chainId > 0 {
 		return ""
 	}
 
 	s := blue.Render("What's network do you want to choose?") + "\n"
 	for i, choice := range c.choices {
-		if c.cursor == i { //    T
+		if c.cursor == i {
 			s += green.Render(fmt.Sprintf("\U000F012D %s", choice)) + "\n"
 		} else {
 			s += optionStyle.Render(fmt.Sprintf("  %s", choice)) + "\n"
