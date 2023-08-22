@@ -40,6 +40,7 @@ const (
 	KeyHelp
 	KeyQuit
 	KeyEnter
+	KeyTab
 )
 
 type KeyMap struct {
@@ -73,6 +74,9 @@ func (k KeyMap) getKeyBinding(flag KeyType) []key.Binding {
 	}
 	if flag&KeyQuit != 0 {
 		keys = append(keys, k.keys[KeyQuit])
+	}
+	if flag&KeyTab != 0 {
+		keys = append(keys, k.keys[KeyTab])
 	}
 	if flag&KeyEnter != 0 {
 		keys = append(keys, k.keys[KeyEnter])
@@ -169,21 +173,12 @@ func (c ChainSelector) View() string {
 	return s
 }
 
-func Println(v ...any) {
-	go app.Println(v...)
-	time.Sleep(time.Millisecond)
-}
-
-var (
-	app = tea.NewProgram(ChainSelector{
+func main() {
+	if _, err := tea.NewProgram(ChainSelector{
 		choices: []string{BSC, Main},
 		help:    help.New(),
 		keyMap:  NewSelectKeyMap(),
-	})
-)
-
-func main() {
-	if _, err := app.Run(); err != nil {
+	}).Run(); err != nil {
 		println(err)
 		os.Exit(1)
 	}
