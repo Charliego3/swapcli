@@ -17,14 +17,16 @@ import (
 )
 
 type Options struct {
-	chainId  int
-	client   *ethclient.Client
-	token0   *entities.Token
-	token1   *entities.Token
-	erc200   *contracts.ERC20
-	erc201   *contracts.ERC20
-	market   string
-	exchange apis.Exchange
+	chainId   int
+	client    *ethclient.Client
+	token0    *entities.Token
+	token1    *entities.Token
+	erc200    *contracts.ERC20
+	erc201    *contracts.ERC20
+	market    string
+	exchange  apis.Exchange
+	accessKey string
+	secretKey string
 }
 
 const (

@@ -57,9 +57,26 @@ func (e *ExchangeSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return e, tea.Batch(tea.Println(green.Render("Exchange: "),
 					grey.Render(apis.ExchangeTypeValues()[e.cursor].String())), textinput.Blink)
 			}
+
+			accessFilled := e.key0.Value() != ""
+			secretFilled := e.key1.Value() != ""
+			if accessFilled && secretFilled {
+				opts.accessKey = e.key0.Value()
+				opts.secretKey = e.key1.Value()
+				return e, tea.Quit
+			}
+
+			if accessFilled && !secretFilled && !e.key1.Focused() {
+				e.key0.Blur()
+				return e, e.key1.Focus()
+			}
+			if !accessFilled && secretFilled && !e.key0.Focused() {
+				e.key1.Blur()
+				return e, e.key0.Focus()
+			}
 		case key.Matches(k, e.keyMap.keys[KeyDown]):
-			if e.toggleFocus() {
-				return e, nil
+			if cmd := e.toggleFocus(); cmd != nil {
+				return e, cmd
 			}
 
 			e.cursor++
@@ -67,14 +84,16 @@ func (e *ExchangeSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				e.cursor = 0
 			}
 		case key.Matches(k, e.keyMap.keys[KeyUp]):
-			if e.toggleFocus() {
-				return e, nil
+			if cmd := e.toggleFocus(); cmd != nil {
+				return e, cmd
 			}
 
 			e.cursor--
 			if e.cursor < 0 {
 				e.cursor = len(apis.ExchangeTypeValues()) - 1
 			}
+		case key.Matches(k, e.keyMap.keys[KeyTab]):
+			return e, e.toggleFocus()
 		case key.Matches(k, e.keyMap.keys[KeyHelp]):
 			e.help.ShowAll = !e.help.ShowAll
 			return e, nil
@@ -90,19 +109,20 @@ func (e *ExchangeSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return e, tea.Batch(cmd0, cmd1)
 }
 
-func (e *ExchangeSelector) toggleFocus() bool {
+func (e *ExchangeSelector) toggleFocus() tea.Cmd {
 	if opts.exchange == nil {
-		return false
+		return nil
 	}
 
+	var cmd tea.Cmd
 	if e.key0.Focused() {
 		e.key0.Blur()
-		e.key1.Focus()
+		cmd = e.key1.Focus()
 	} else {
 		e.key1.Blur()
-		e.key0.Focus()
+		cmd = e.key0.Focus()
 	}
-	return true
+	return cmd
 }
 
 func (e *ExchangeSelector) View() string {
