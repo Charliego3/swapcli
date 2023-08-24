@@ -4,18 +4,23 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"swapcli/apis"
+	"sync/atomic"
+	"time"
 )
 
 type ExchangeSelector struct {
-	keyMap KeyMap
-	help   help.Model
-	key0   textinput.Model
-	key1   textinput.Model
-	cursor int
-	done   bool
+	keyMap   KeyMap
+	help     help.Model
+	key0     textinput.Model
+	key1     textinput.Model
+	spinner  spinner.Model
+	cursor   int
+	done     bool
+	checking atomic.Uint32
 }
 
 func NewExchangeSelector() *ExchangeSelector {
@@ -63,7 +68,15 @@ func (e *ExchangeSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if accessFilled && secretFilled {
 				opts.accessKey = e.key0.Value()
 				opts.secretKey = e.key1.Value()
-				return e, tea.Quit
+				e.spinner = spinner.New(spinner.WithSpinner(spinner.Globe))
+				e.checking.Store(1)
+				go func() {
+					defer func() {
+						e.checking.Store(2)
+					}()
+					time.Sleep(time.Second * 5)
+				}()
+				return e, e.spinner.Tick
 			}
 
 			if accessFilled && !secretFilled && !e.key1.Focused() {
@@ -103,6 +116,15 @@ func (e *ExchangeSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	state := e.checking.Load()
+	if state == 1 {
+		var cmd tea.Cmd
+		e.spinner, cmd = e.spinner.Update(msg)
+		return e, cmd
+	} else if state == 2 {
+		return e, tea.Quit
+	}
+
 	var cmd0, cmd1 tea.Cmd
 	e.key0, cmd0 = e.key0.Update(msg)
 	e.key1, cmd1 = e.key1.Update(msg)
@@ -126,8 +148,12 @@ func (e *ExchangeSelector) toggleFocus() tea.Cmd {
 }
 
 func (e *ExchangeSelector) View() string {
-	if e.done {
+	if e.done || e.checking.Load() == 2 {
 		return "\n"
+	}
+
+	if e.checking.Load() == 1 {
+		return "\n" + padding.Render(e.spinner.View()) + grey.Render(" checking account...\n")
 	}
 
 	var s string

@@ -165,7 +165,7 @@ func (t *TokenSelector) View() string {
 
 	var s string
 	if t.loading {
-		s = "\n" + t.spinner.View() + grey.Render(" loading token ...")
+		s = "\n" + t.spinner.View() + grey.Render(" loading token...")
 	} else {
 		s = blue.Render("What's the contract address of the "+t.getPrompt()+"?") + "\n"
 		s += t.input.View()
